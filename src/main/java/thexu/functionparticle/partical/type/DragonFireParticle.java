@@ -31,7 +31,7 @@ public class DragonFireParticle extends TextureSheetParticle {
 /*
         //设置粒子初始旋转
         Vector3f curSpeed = new Vector3f((float) (xd), (float) (yd), (float) zd);
-        curSpeed=curSpeed.add(curSpeed.cross((float) (yd * Math.random()), (float) ((float) zd * Math.random()), (float) ((float) xd * Math.random())).normalize().mul(0.2f));
+        curSpeed=curSpeed.add(curSpeed.cross((float) (yd * Math.randomExp()), (float) ((float) zd * Math.randomExp()), (float) ((float) xd * Math.randomExp())).normalize().mul(0.2f));
         this.xd = curSpeed.x ;
         this.yd = curSpeed.y ;
         this.zd = curSpeed.z ;
@@ -58,9 +58,9 @@ public class DragonFireParticle extends TextureSheetParticle {
         super.tick();
 
         /*
-        this.xd += this.random.nextFloat() / 5.0F * (float) (this.random.nextBoolean() ? 1 : -1);
-        this.yd += this.random.nextFloat() / 10.0F;
-        this.zd += this.random.nextFloat() / 5.0F * (float) (this.random.nextBoolean() ? 1 : -1);
+        this.xd += this.randomExp.nextFloat() / 5.0F * (float) (this.randomExp.nextBoolean() ? 1 : -1);
+        this.yd += this.randomExp.nextFloat() / 10.0F;
+        this.zd += this.randomExp.nextFloat() / 5.0F * (float) (this.randomExp.nextBoolean() ? 1 : -1);
 */
 
 /*

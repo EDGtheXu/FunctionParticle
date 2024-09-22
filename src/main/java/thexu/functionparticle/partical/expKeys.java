@@ -3,10 +3,7 @@ package thexu.functionparticle.partical;
 public enum expKeys {
     EMIT_SPEED,//发射速度，个/tick
 
-    X, Y, Z,
-    VARIABLE_X,
-    VARIABLE_Y,
-    VARIABLE_Z,
+
 
 
     OFFSET_X, OFFSET_Y, OFFSET_Z,
@@ -20,6 +17,7 @@ public enum expKeys {
     X_SPEED, Y_SPEED, Z_SPEED,
     T_SPEED_X, T_SPEED_Y, T_SPEED_Z,
 
+    INIT_LIFETIME,
     X_Y_Z_LIFETIME,
     T_LIFETIME,
 
@@ -28,7 +26,7 @@ public enum expKeys {
 
     FRICTION,
 
-
+    LOCAL,//定义后粒子初始化移动并旋转到发射器本地坐标系
 
 
 

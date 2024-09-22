@@ -16,6 +16,8 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import thexu.functionparticle.partical.CoordinateSystem;
 import thexu.functionparticle.partical.expKeys;
+import thexu.functionparticle.partical.expPointKeys;
+import thexu.functionparticle.partical.quickComputerKeys;
 import thexu.functionparticle.registry.ModEntities;
 
 import java.util.ArrayList;
@@ -27,7 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class expEncoder extends Entity {
     Map<String,String> map;
     private String exp;
-    public List<Vector3f> pPoss= new ArrayList<>();
+    public List<Vector3f> pPoss;
 
     private Vec2 rotInit;
     private CoordinateSystem coordinateSystem;
@@ -68,50 +70,21 @@ public class expEncoder extends Entity {
     }
 
     //build构造
-    public expEncoder(Level level, Vec3 initPos, Vec2 rotDirection, CoordinateSystem rotateCoordinate, Builder expMap){
+    public expEncoder(Level level, Vec3 initPos, Vec2 rotDirection,  Builder expMap){
         this(ModEntities.PARTICLE_EMITTER.get(), level);
         this.moveTo(initPos);
-
         this.initPos = initPos;
+        this.pPoss = expMap.Points;
         this.map = expMap.result;
         this.rx = expMap.rx;
         this.ry = expMap.ry;
         this.rz = expMap.rz;
 
-        //是否本地坐标轴
-        map.put("COORDINATE",rotateCoordinate.name());
+
         //若启用本地坐标轴，初始旋转方向
         rotInit = rotDirection;
-        coordinateSystem = rotateCoordinate;
-        if(rotateCoordinate== CoordinateSystem.LOCAL)
-            map.put("INIT_ROT",rotDirection.x+":"+ rotDirection.y);
-        //计算map初始位置信息
-        Expression x = new ExpressionBuilder(map.getOrDefault(expKeys.X.name(), "0")).variables("x","y","z").build();
-        Expression y = new ExpressionBuilder(map.getOrDefault(expKeys.Y.name(), "0")).variables("x","y","z").build();
-        Expression z = new ExpressionBuilder(map.getOrDefault(expKeys.Z.name(), "0")).variables("x","y","z").build();
-
-        String variableX = map.getOrDefault(expKeys.VARIABLE_X.name(),"1:1:1");
-        String variableY = map.getOrDefault(expKeys.VARIABLE_Y.name(),"1:1:1");
-        String variableZ = map.getOrDefault(expKeys.VARIABLE_Z.name(),"1:1:1");
-
-        String[] spX = variableX.split(":");
-        float[] vx = new float[]{Float.parseFloat(spX[0]),Float.parseFloat(spX[1]),Float.parseFloat(spX[2])};
-        String[] spY = variableY.split(":");
-        float[] vy = new float[]{Float.parseFloat(spY[0]),Float.parseFloat(spY[1]),Float.parseFloat(spY[2])};
-        String[] spZ = variableZ.split(":");
-        float[] vz = new float[]{Float.parseFloat(spZ[0]),Float.parseFloat(spZ[1]),Float.parseFloat(spZ[2])};
-
-
-        for(float i=vx[0];i<=vx[2];i+=vx[1]){
-            for(float j=vy[0];j<=vy[2];j+=vy[1]){
-                for(float k=vz[0];k<=vz[2];k+=vz[1]){
-                    double xc = x.setVariable("x",i).setVariable("y",j).setVariable("z",k).evaluate();
-                    double yc = y.setVariable("x",i).setVariable("y",j).setVariable("z",k).evaluate();
-                    double zc = z.setVariable("x",i).setVariable("y",j).setVariable("z",k).evaluate();
-                    pPoss.add(new Vector3f((float) xc, (float) yc, (float) zc));
-                }
-            }
-        }
+        if(map.containsKey(expKeys.LOCAL.name()))
+            map.put(expKeys.LOCAL.name(),rotDirection.x+":"+ rotDirection.y);
 
         //表达式点旋转
         if(rx!=0||ry!=0||rz!=0){
@@ -123,31 +96,11 @@ public class expEncoder extends Entity {
         }
 
         this.exp = expDecode(map);
-        if(expMap.additionPoints!=null) this.pPoss.addAll(expMap.additionPoints);
     }
 
 
 
 
-        //添加点
-    public void append(Map<String,String> from){
-        Expression x = new ExpressionBuilder(from.getOrDefault(expKeys.X.name(), "0")).variable("x").build();
-        Expression y = new ExpressionBuilder(from.getOrDefault(expKeys.Y.name(), "0")).variable("x").build();
-        Expression z = new ExpressionBuilder(from.getOrDefault(expKeys.Z.name(), "0")).variable("x").build();
-        String variable = from.getOrDefault(expKeys.VARIABLE_X.name(),"0:0:0");
-        String[] splits = variable.split(":");
-        float min = Float.parseFloat(splits[0]);
-        float step = Float.parseFloat(splits[1]);
-        float max = Float.parseFloat(splits[2]);
-
-        for(float i=min;i<=max;i+=step){
-            double xc = x.setVariable("x",i).evaluate();
-            double yc = y.setVariable("x",i).evaluate();
-            double zc = z.setVariable("x",i).evaluate();
-            pPoss.add(new Vector3f((float) xc, (float) yc, (float) zc));
-        }
-
-    }
 
     //添加几何构造点
     public void append(List<Vector3f> geometry){
@@ -163,32 +116,32 @@ public class expEncoder extends Entity {
 
     int curCount = 0;
     public int genParticle(int from,int count){
-    for(int i=0;i<count;i++){
-        if(from+i>=pPoss.size()) return i;
-        var n = pPoss.get(from+i);
+        for(int i=0;i<count;i++){
+            if(from+i>=pPoss.size()) return i;
+            var n = pPoss.get(from+i);
 
-        //平移到initPos
-        double x = n.x+initPos.x;
-        double y = n.y+initPos.y;
-        double z = n.z+initPos.z;
-        //旋转到LOCAL
-        if(coordinateSystem== CoordinateSystem.LOCAL){
-            Vector3f newRot = new Vector3f((float) n.x, (float) n.y, (float) n.z);
-            var ma1 = new Matrix4f().rotate((float) (-Math.toRadians(rotInit.x)/2),new Vector3f(0,0,1));
-            ma1.transformPosition(newRot);
-            var m2 = new Matrix4f().rotate((float) Math.toRadians(-90- rotInit.y),new Vector3f(0,1,0));
-            m2.transformPosition(newRot);
+            //平移到initPos
+            double x = n.x+initPos.x;
+            double y = n.y+initPos.y;
+            double z = n.z+initPos.z;
+            //旋转到LOCAL
+            if(coordinateSystem== CoordinateSystem.LOCAL){
+                Vector3f newRot = new Vector3f((float) n.x, (float) n.y, (float) n.z);
+                var ma1 = new Matrix4f().rotate((float) (-Math.toRadians(rotInit.x)/2),new Vector3f(0,0,1));
+                ma1.transformPosition(newRot);
+                var m2 = new Matrix4f().rotate((float) Math.toRadians(-90- rotInit.y),new Vector3f(0,1,0));
+                m2.transformPosition(newRot);
 
-            x = newRot.x+initPos.x;
-            y = newRot.y+initPos.y;
-            z = newRot.z+initPos.z;
+                x = newRot.x+initPos.x;
+                y = newRot.y+initPos.y;
+                z = newRot.z+initPos.z;
+            }
+
+            String sendExp = exp+"INIT_POS"+":"+initPos.x+":"+initPos.y+":"+initPos.z+";";
+            if(!level().isClientSide)
+                ((ServerLevel)level()).sendParticles(new BaseFunctionOption(x,y,z,sendExp),x,y,z,1,0,0,0,0);
         }
-
-        String sendExp = exp+"INIT_POS"+":"+initPos.x+":"+initPos.y+":"+initPos.z+";";
-        if(!level().isClientSide)
-            ((ServerLevel)level()).sendParticles(new BaseFunctionOption(x,y,z,sendExp),x,y,z,1,0,0,0,0);
-    }
-    return count;
+        return count;
     }
 
     public void tick(){
@@ -207,21 +160,32 @@ public class expEncoder extends Entity {
 
 
 
+
+/** 构造类 **/
     public static class Builder{
         public Builder self;
         private final Map<String,String> result = new LinkedHashMap<>();
         public float rx;
         public float ry;
         public float rz;
-        public List<Vector3f> additionPoints;
+        public List<Vector3f> Points = new ArrayList<>();
         public Builder(){
 
         }
+
+
+
+        //添加点的运动表达式
         public Builder add(expKeys key,String exp){
             result.put(key.name(),exp);
             return this;
         }
+        public Builder add(quickComputerKeys key, String exp){
+            result.put(key.name(),exp);
+            return this;
+        }
 
+        //点的初始化旋转
         public Builder rotate(int xRot, int yRot, int zRot){
             rx=(float) java.lang.Math.toRadians(xRot);
             ry=(float) java.lang.Math.toRadians(yRot);
@@ -229,6 +193,7 @@ public class expEncoder extends Entity {
             return this;
         }
 
+        //build结束标志
         public Builder buildMap(){
             return this;
         }
@@ -239,17 +204,62 @@ public class expEncoder extends Entity {
             return str.get();
         }
 
-        public Builder addPoints(Points points){
-            this.additionPoints = points.buildPos;
+
+
+
+        //添加点
+        public Builder addExpPoints(ExpPoints points){
+            this.Points.addAll( points.temp);
+            return this;
+        }
+        public Builder addPoints(ShapePoints points){
+            this.Points.addAll(points.buildPos) ;
             return this;
         }
 
+        public static class ExpPoints {
+            List<Vector3f> temp =new ArrayList<>();
+            private final Map<String,String> result = new LinkedHashMap<>();
 
-        public static class Points {
+            public ExpPoints addExp(expPointKeys key, String exp){
+                result.put(key.name(),exp);
+
+                return this;
+            }
+
+
+            public ExpPoints scale(int x, int y, int z){
+                for(var n : temp){ n.mul(x,y,z); }
+                return this;
+            }
+
+            public ExpPoints rotate(int xRot, int yRot, int zRot){
+                for(var n : temp){ new Matrix4f()
+                        .rotate(Axis.XN.rotation(xRot))
+                        .rotate(Axis.YN.rotation(yRot))
+                        .rotate(Axis.ZN.rotation(zRot))
+                        .transformPosition(n);
+                }
+                return this;
+            }
+            public ExpPoints transLate(int x, int y, int z){
+                for(var n : temp){ n.add(x,y,z); }
+                return this;
+            }
+            public ExpPoints confirm(){
+                append(result,temp);
+                return this;
+            }
+        }
+
+
+
+
+        public static class ShapePoints {
             private List<Vector3f> buildPos = new ArrayList<>();
             private List<Vector3f> temp;
             //在x轴生成
-            public Points genLine(float internal, float length){
+            public ShapePoints genLine(float internal, float length){
                 if(temp==null) temp = new ArrayList<>();
                 for(float i=0;i<=length;i+=internal){
                     temp.add(new Vector3f(i,0,0));
@@ -257,14 +267,14 @@ public class expEncoder extends Entity {
                 return this;
             }
 
-            public Points genPoint(Vector3f origen){
+            public ShapePoints genPoint(Vector3f origen){
                 if(temp==null) temp = new ArrayList<>();
                 temp.add(origen);
                 return this;
             }
 
             //yz平面
-            public Points genCircle(float r, float internal){
+            public ShapePoints genCircle(float r, float internal){
                 if(temp==null) temp = new ArrayList<>();
                 for(float i=0;i<=360;i+=internal){
                     temp.add(new Vector3f(0f, (float) Math.cos(i),(float) Math.sin(i)));
@@ -272,24 +282,24 @@ public class expEncoder extends Entity {
                 return this;
             }
 
-            public Points addToList(){
+            public ShapePoints addToList(){
                 if(temp==null) return this;
                 buildPos.addAll(temp);
                 temp = null;
                 return this;
             }
 
-            public Points transLate(int x, int y, int z){
+            public ShapePoints transLate(int x, int y, int z){
                 for(var n : temp){ n.add(x,y,z); }
                 return this;
             }
 
-            public Points scale(int x, int y, int z){
+            public ShapePoints scale(int x, int y, int z){
                 for(var n : temp){ n.mul(x,y,z); }
                 return this;
             }
 
-            public Points rotate(int xRot, int yRot, int zRot){
+            public ShapePoints rotate(int xRot, int yRot, int zRot){
                 for(var n : temp){ new Matrix4f()
                         .rotate(Axis.XN.rotation(xRot))
                         .rotate(Axis.YN.rotation(yRot))
@@ -299,12 +309,46 @@ public class expEncoder extends Entity {
                 return this;
             }
 
-            public Points confirm(){return this;}
+            public ShapePoints confirm(){return this;}
         }
+
+
+
+
     }
 
 
 
+    //添加点
+    public static void append(Map<String,String> from,List<Vector3f> to){
+        Expression x = new ExpressionBuilder(from.getOrDefault(expPointKeys.X.name(), "0")).variables("x","y","z").build();
+        Expression y = new ExpressionBuilder(from.getOrDefault(expPointKeys.Y.name(), "0")).variables("x","y","z").build();
+        Expression z = new ExpressionBuilder(from.getOrDefault(expPointKeys.Z.name(), "0")).variables("x","y","z").build();
+
+        String variableX = from.getOrDefault(expPointKeys.VARIABLE_X.name(),"1:1:1");
+        String variableY = from.getOrDefault(expPointKeys.VARIABLE_Y.name(),"1:1:1");
+        String variableZ = from.getOrDefault(expPointKeys.VARIABLE_Z.name(),"1:1:1");
+
+        String[] spX = variableX.split(":");
+        float[] vx = new float[]{Float.parseFloat(spX[0]),Float.parseFloat(spX[1]),Float.parseFloat(spX[2])};
+        String[] spY = variableY.split(":");
+        float[] vy = new float[]{Float.parseFloat(spY[0]),Float.parseFloat(spY[1]),Float.parseFloat(spY[2])};
+        String[] spZ = variableZ.split(":");
+        float[] vz = new float[]{Float.parseFloat(spZ[0]),Float.parseFloat(spZ[1]),Float.parseFloat(spZ[2])};
+
+
+        for(float i=vx[0];i<=vx[2];i+=vx[1]){
+            for(float j=vy[0];j<=vy[2];j+=vy[1]){
+                for(float k=vz[0];k<=vz[2];k+=vz[1]){
+                    double xc = x.setVariable("x",i).setVariable("y",j).setVariable("z",k).evaluate();
+                    double yc = y.setVariable("x",i).setVariable("y",j).setVariable("z",k).evaluate();
+                    double zc = z.setVariable("x",i).setVariable("y",j).setVariable("z",k).evaluate();
+                    to.add(new Vector3f((float) xc, (float) yc, (float) zc));
+                }
+            }
+        }
+
+    }
 
 
     @Override

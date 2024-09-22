@@ -12,6 +12,7 @@ import thexu.functionparticle.partical.expParticle.expEncoder;
 import thexu.functionparticle.partical.CoordinateSystem;
 import thexu.functionparticle.partical.gener.ParticleGener;
 import thexu.functionparticle.partical.util.ParticleHelper;
+import thexu.functionparticle.partical.util.expHelper;
 
 import java.awt.*;
 import java.util.List;
@@ -42,7 +43,7 @@ public class menuItem extends Item {
 
         }
         if (!pLevel.isClientSide && pUsedHand == InteractionHand.OFF_HAND) {
-            ParticleHelper helper = new ParticleHelper();
+            expHelper helper = new expHelper();
             var exp =helper.exps.get(index);
             index = (index+1)%helper.exps.size();
 
@@ -63,7 +64,6 @@ public class menuItem extends Item {
             expEncoder expGen = new expEncoder(pLevel,
                     pPlayer.position().add(0,2,0),
                     pPlayer.getRotationVector().add(new Vec2(pPlayer.getXRot(), 0)),
-                    CoordinateSystem.LOCAL,
                     exp
                     );
 

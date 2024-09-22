@@ -3,18 +3,23 @@ package thexu.functionparticle.partical.util;
 
 
 import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.world.entity.LivingEntity;
 import org.joml.Vector3f;
 import thexu.functionparticle.partical.expParticle.BaseFunctionOption;
 import thexu.functionparticle.partical.expParticle.expEncoder;
 import thexu.functionparticle.partical.expKeys;
+import thexu.functionparticle.partical.expPointKeys;
 import thexu.functionparticle.partical.gener.ParticleGener;
+import thexu.functionparticle.partical.quickComputerKeys;
 import thexu.functionparticle.partical.type.BaseParticleOptions;
 import thexu.functionparticle.partical.type.FogParticleOptions;
 import thexu.functionparticle.registry.ParticleRegistry;
 
+import javax.swing.text.html.parser.Entity;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 public class ParticleHelper {
     //public static final ParticleOptions DRAGON_FIRE = ParticleRegistry.DRAGON_FIRE_PARTICLE.get();
@@ -49,61 +54,4 @@ public class ParticleHelper {
     public static final ParticleOptions BASE_TEST = new BaseParticleOptions(new Vector3f(0.95f, 0.97f, 0.36f), 0.1f,"hello world!");
     public static final ParticleOptions BASE_FUNCTION_PARTICLE_OPTION = new BaseFunctionOption(0,0,0,"  ");
 
-    public List<expEncoder.Builder> exps = List.of(EXP_RANDOM);
-
-    public static expEncoder.Builder EXP_RANDOM = new expEncoder.Builder()
-            .add(expKeys.X,"x*sin(y)*cos(z)")
-            .add(expKeys.Y,"x*cos(y)-1")
-            .add(expKeys.Z,"x*sin(y)*sin(z)")
-            .add(expKeys.VARIABLE_X,"1:1:1")
-            .add(expKeys.VARIABLE_Y,"0:0.08:3.14")
-            .add(expKeys.VARIABLE_Z,"0:0.08:6.28")
-
-            .add(expKeys.EMIT_SPEED,"100")
-            .add(expKeys.KEEP_SPEED,"")
-
-            .add(expKeys.X_SPEED,"if(0.5,1,-1)*random(0,0.002)")
-            .add(expKeys.Y_SPEED,"random(0,0.001)")
-            .add(expKeys.Z_SPEED,"if(0.5,1,-1)*random(0,0.002)")
-
-            .add(expKeys.T_LIFETIME,"100")
-            .add(expKeys.T_COLOR, Color.yellow.getRGB()+"+3*x")
-            .add(expKeys.T_SCALE,"0.03*(100-x)*0.01")
-            .buildMap();
-
-    public static expEncoder.Builder EXP_SQUARE = new expEncoder.Builder()
-            .add(expKeys.X,"x*sin(y)*cos(z)")
-            .add(expKeys.Y,"x*cos(y)")
-            .add(expKeys.Z,"x*sin(y)*sin(z)")
-            .add(expKeys.VARIABLE_X,"1:1:1")
-            .add(expKeys.VARIABLE_Y,"0:0.1:3.14")
-            .add(expKeys.VARIABLE_Z,"0:0.1:6.28")
-            .add(expKeys.T_LIFETIME,"100")
-            .add(expKeys.EMIT_SPEED,"10000")
-            //.add(expKeys.T_SPEED_X,"0.2*x^0.2")
-            //.add(expKeys.Y_SPEED,"random(0,1)-0.5")
-            //.add(expKeys.Z_SPEED,"random(0,1)-0.5")
-            .add(expKeys.T_COLOR, Color.yellow.getRGB()+"+x")
-            .add(expKeys.T_SCALE,"0.1-0.001*x")
-            .buildMap();
-
-
-    public static expEncoder.Builder EXP_LOVE = new expEncoder.Builder()
-            //.add(expKeys.X,"sin(x)")
-            .add(expKeys.Y,"16*(sin(x))^3*0.1")
-            .add(expKeys.Z,"(13*cos(x)-5cos(2*x)-2*cos(3*x)-cos(4*x))*0.1")
-            .add(expKeys.VARIABLE_X,"0:0.02:6.28")
-
-            .add(expKeys.EMIT_SPEED,"10000")
-            //.add(expKeys.T_COLOR,"")
-            .add(expKeys.T_SPEED_X,"0.2*x^0.2")
-            //.add(expKeys.Y_SPEED,"random(0,1)-0.5")
-            //.add(expKeys.Z_SPEED,"random(0,1)-0.5")
-
-            .add(expKeys.T_COLOR, Color.red.getRGB() +"+x*0.00001*256*256*256")
-            .add(expKeys.T_SCALE,"0.1-0.001*x")
-
-            //.add(expKeys.EMIT_SPEED,"1000")
-            .rotate(90,0,0)
-            .buildMap();
 }

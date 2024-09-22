@@ -2,24 +2,29 @@ package thexu.functionparticle.partical.expParticle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.*;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.util.Mth;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.objecthunter.exp4j.Expression;
 import net.objecthunter.exp4j.ExpressionBuilder;
 import net.objecthunter.exp4j.function.Function;
+import org.checkerframework.common.returnsreceiver.qual.This;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import thexu.functionparticle.partical.CoordinateSystem;
 import thexu.functionparticle.partical.expKeys;
+import thexu.functionparticle.partical.quickComputerKeys;
 
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 public class BaseFunctionParticle extends TextureSheetParticle {
     private Map<String,String> map;
 
-    private CoordinateSystem coordinateSystem= CoordinateSystem.WORLD;;
+    private boolean local = false;
 
     //中心坐标初始位置
     private double xInit;
@@ -36,8 +41,7 @@ public class BaseFunctionParticle extends TextureSheetParticle {
     private double yCenter;
     private double zCenter;
 
-    boolean keepSpeed = false;
-
+    private boolean keepSpeed = false;
 
     private double directionXInit;
     private double directionYInit;
@@ -74,7 +78,7 @@ public class BaseFunctionParticle extends TextureSheetParticle {
         }
     };
 
-    public final Function random = new Function("random",2) {
+    public final Function randomExp = new Function("randomExp",2) {
         @Override
         public double apply(double... args) {
             return Math.random()*(args[1]-args[0])+args[0];
@@ -90,14 +94,20 @@ public class BaseFunctionParticle extends TextureSheetParticle {
         }
     };
 
+    public final BiFunction<Float,Float,Float> randomFunc =
+            (a,b)->random.nextFloat()* a* (random.nextFloat()<b?1:-1);
+    public final java.util.function.Function<float[], Float> lifeLerpFunc =
+            (a)-> (float) (a[0]+(a[1]-a[0])*(age*1.0 /lifetime));
 
 
-    Map<Expression, Consumer<BaseFunctionParticle>> activeExpressions = new LinkedHashMap<>();
+
+    List<Consumer<BaseFunctionParticle>> activeExpressions = new ArrayList<>();
+
 
     BaseFunctionParticle(ClientLevel pLevel,double x,double y,double z ,BaseFunctionOption options) {
         super(pLevel, x, y, z, 0, 0, 0);
 
-        functions.addAll(List.of(distance,random,expMax));
+        functions.addAll(List.of(distance, randomExp,expMax));
 
         this.xd=0;this.yd=0;this.zd=0;
         this.friction = 0.5f;
@@ -113,7 +123,7 @@ public class BaseFunctionParticle extends TextureSheetParticle {
         this.yCenter = y - yInit;
         this.zCenter = z - zInit;
 
-        activeExpressions.values().forEach(a->a.accept(this));
+        //activeExpressions.forEach(a->a.accept(this));
     }
 
     @Override
@@ -126,29 +136,27 @@ public class BaseFunctionParticle extends TextureSheetParticle {
             this.zdCache = 0;
         }
 
-
         //应用函数效果
-        activeExpressions.values().forEach(a->a.accept(this));
+        activeExpressions.forEach(a->a.accept(this));
 
         //提前移除
         if(this.quadSize<=0) removed = true;
 
-        //速度应用旋转和平移
-        if(coordinateSystem== CoordinateSystem.LOCAL){
-            //Vector3f newRot = new Vector3f((float) this.xCenter, (float) this.yCenter, (float) this.zCenter);
+
+        if(local){// 如果是本地坐标系，更新速度cache旋转后的速度
             Vector3f rotd = new Vector3f((float) this.xdCache, (float) this.ydCache, (float) this.zdCache);
             var ma1 = new Matrix4f().rotate((float) (-Math.toRadians(directionXInit)/2),new Vector3f(0,0,1));
-            //ma1.transformPosition(newRot);
             ma1.transformPosition(rotd);
             var m2 = new Matrix4f().rotate((float) Math.toRadians(-90-directionYInit),new Vector3f(0,1,0));
-            //m2.transformPosition(newRot);
             m2.transformPosition(rotd);
 
-            //更新速度
             this.xd = rotd.x;
             this.yd = rotd.y;
             this.zd = rotd.z;
-
+        }else{//否则直接更新
+            this.xd = xdCache;
+            this.yd = ydCache;
+            this.zd = zdCache;
         }
 
         //更新位置缓存
@@ -158,7 +166,8 @@ public class BaseFunctionParticle extends TextureSheetParticle {
 
         super.tick();
 
-        if((x-xInit*x-xInit+y-yInit*y-yInit+z-zInit*z-zInit) > 200) removed = true;
+        //距离过远直接舍弃
+        if((x-xInit*x-xInit+y-yInit*y-yInit+z-zInit*z-zInit) > 200) remove();
     }
 
     @NotNull
@@ -212,19 +221,22 @@ public class BaseFunctionParticle extends TextureSheetParticle {
                 this.yInit = Double.parseDouble(sp[1]);
                 this.zInit = Double.parseDouble(sp[2]);
 
-            }else if(n.equals("INIT_ROT")) {
+            }else if(n.equals(expKeys.LOCAL.name())) {//转向到本地坐标
                 this.directionXInit = Double.parseDouble(sp[0]);
                 this.directionYInit = Double.parseDouble(sp[1]);
-                this.coordinateSystem = CoordinateSystem.LOCAL;
+                local = true;
             }else if(n.equals(expKeys.INIT_SPEED.name())){
-                this.xd = Double.parseDouble(sp[0]);
-                this.yd = Double.parseDouble(sp[1]);
-                this.zd = Double.parseDouble(sp[2]);
+                this.xdCache = Double.parseDouble(sp[0]);
+                this.ydCache = Double.parseDouble(sp[1]);
+                this.zdCache = Double.parseDouble(sp[2]);
+            }else if(n.equals(expKeys.INIT_LIFETIME.name())){
+                this.lifetime = (int) new ExpressionBuilder(v).variables("x","y","z").functions(functions).build()
+                        .setVariable("x",x).setVariable("y",y).setVariable("z",z).evaluate();
 
                 /* color */
             }else if(n.equals(expKeys.X_Y_ZCOLOR.name())){
                 this.xyzColorExp = new ExpressionBuilder(v).variables("x","y","z").functions(functions).build();
-                activeExpressions.put(xyzColorExp, p -> {
+                activeExpressions.add( p -> {
                     int color = (int) xyzColorExp.setVariable("x", p.xCenter).setVariable("y", p.yCenter).setVariable("z", p.zCenter).evaluate();
                     p.bCol = (float) ((color & 255) / 255.0);color >>= 8;
                     p.gCol = (float) ((color & 255) / 255.0);color >>= 8;
@@ -233,7 +245,7 @@ public class BaseFunctionParticle extends TextureSheetParticle {
                 });
             }else if(n.equals(expKeys.T_COLOR.name())){
                 this.tColorExp = new ExpressionBuilder(v).variable("x").functions(functions).build();
-                activeExpressions.put(tColorExp, p -> {
+                activeExpressions.add( p -> {
                     int color = (int) tColorExp.setVariable("x", p.age).evaluate();
                     p.bCol = (float) ((color & 255) / 255.0);color >>= 8;
                     p.gCol = (float) ((color & 255) / 255.0);color >>= 8;
@@ -244,53 +256,95 @@ public class BaseFunctionParticle extends TextureSheetParticle {
                 /* force */
             }else if(n.equals(expKeys.OFFSET_X.name())){
                 this.offsetXExp = new ExpressionBuilder(v).variable("x").functions(functions).build();
-                activeExpressions.put(offsetXExp, p -> p.xdCache += offsetXExp.setVariable("x", p.xCenter).evaluate());
+                activeExpressions.add( p -> p.xdCache += offsetXExp.setVariable("x", p.xCenter).evaluate());
             }else if(n.equals(expKeys.OFFSET_Y.name())){
                 this.offsetYdExp = new ExpressionBuilder(v).variable("x").functions(functions).build();
-                activeExpressions.put(offsetYdExp, p -> p.ydCache += offsetYdExp.setVariable("x", p.yCenter).evaluate());
+                activeExpressions.add( p -> p.ydCache += offsetYdExp.setVariable("x", p.yCenter).evaluate());
             }else if(n.equals(expKeys.OFFSET_Z.name())){
                 this.offsetZdExp = new ExpressionBuilder(v).variable("x").functions(functions).build();
-                activeExpressions.put(offsetZdExp, p -> p.zdCache += offsetZdExp.setVariable("x", p.zCenter).evaluate());
+                activeExpressions.add(p -> p.zdCache += offsetZdExp.setVariable("x", p.zCenter).evaluate());
 
                 /* speed */
             }else if(n.equals(expKeys.X_SPEED.name())){
                 this.xdExp = new ExpressionBuilder(v).variable("x").functions(functions).build();
-                activeExpressions.put(xdExp, p -> p.xdCache += xdExp.setVariable("x", p.xCenter).evaluate());
+                activeExpressions.add(p -> p.xdCache += xdExp.setVariable("x", p.xCenter).evaluate());
             }else if(n.equals(expKeys.Y_SPEED.name())){
                 this.ydExp = new ExpressionBuilder(v).variable("x").functions(functions).build();
-                activeExpressions.put(ydExp, p -> p.ydCache += ydExp.setVariable("x", p.yCenter).evaluate());
+                activeExpressions.add(p -> p.ydCache += ydExp.setVariable("x", p.yCenter).evaluate());
             }else if(n.equals(expKeys.Z_SPEED.name())){
                 this.zdExp = new ExpressionBuilder(v).variable("x").functions(functions).build();
-                activeExpressions.put(zdExp, p -> p.zdCache += zdExp.setVariable("x", p.zCenter).evaluate());
+                activeExpressions.add( p -> p.zdCache += zdExp.setVariable("x", p.zCenter).evaluate());
 
             }else if(n.equals(expKeys.T_SPEED_X.name())){
                 this.xdtExp = new ExpressionBuilder(v).variable("x").functions(functions).build();
-                activeExpressions.put(xdtExp, p -> p.xdCache += xdtExp.setVariable("x", age).evaluate());
+                activeExpressions.add(p -> p.xdCache += xdtExp.setVariable("x", age).evaluate());
             }else if(n.equals(expKeys.T_SPEED_Y.name())){
                 this.ydtExp = new ExpressionBuilder(v).variable("x").functions(functions).build();
-                activeExpressions.put(ydtExp, p -> p.ydCache += ydtExp.setVariable("x", age).evaluate());
+                activeExpressions.add(p -> p.ydCache += ydtExp.setVariable("x", age).evaluate());
             }else if(n.equals(expKeys.T_SPEED_Z.name())) {
                 this.zdtExp = new ExpressionBuilder(v).variable("x").functions(functions).build();
-                activeExpressions.put(zdtExp, p -> p.zdCache += zdtExp.setVariable("x", age).evaluate());
+                activeExpressions.add(p -> p.zdCache += zdtExp.setVariable("x", age).evaluate());
             }else if(n.equals(expKeys.KEEP_SPEED.name())){
                 keepSpeed = true;
 
                 /* lifetime */
             }else if(n.equals(expKeys.X_Y_Z_LIFETIME.name())){
                 this.xyzLifeTimeExp = new ExpressionBuilder(v).variables("x","y","z").functions(functions).build();
-                activeExpressions.put(xyzLifeTimeExp, p -> p.lifetime = (int) xyzLifeTimeExp.setVariable("x", p.xCenter).setVariable("y", p.yCenter).setVariable("z", p.zCenter).evaluate());
+                activeExpressions.add(p -> p.lifetime = (int) xyzLifeTimeExp.setVariable("x", p.xCenter).setVariable("y", p.yCenter).setVariable("z", p.zCenter).evaluate());
             }else if(n.equals(expKeys.T_LIFETIME.name())){
                 this.tLifeTimeExp = new ExpressionBuilder(v).variable("x").functions(functions).build();
-                activeExpressions.put(tLifeTimeExp, p -> p.lifetime = (int) tLifeTimeExp.setVariable("x", p.age).evaluate());
+                activeExpressions.add(p -> p.lifetime = (int) tLifeTimeExp.setVariable("x", p.age).evaluate());
 
                 /* scale */
             }else if(n.equals(expKeys.X_Y_Z_SCALE.name())){
                 this.xyzScaleExp = new ExpressionBuilder(v).variables("x","y","z").functions(functions).build();
-                activeExpressions.put(xyzScaleExp, p -> p.quadSize = (float) xyzLifeTimeExp.setVariable("x", p.xCenter).setVariable("y", p.yCenter).setVariable("z", p.zCenter).evaluate());
+                activeExpressions.add(p -> p.quadSize = (float) xyzLifeTimeExp.setVariable("x", p.xCenter).setVariable("y", p.yCenter).setVariable("z", p.zCenter).evaluate());
             }else if(n.equals(expKeys.T_SCALE.name())){
                 this.tScaleExp = new ExpressionBuilder(v).variable("x").functions(functions).build();
-                activeExpressions.put(tScaleExp, p -> p.quadSize = (float) tScaleExp.setVariable("x", p.age).evaluate());
+                activeExpressions.add(p -> p.quadSize = (float) tScaleExp.setVariable("x", p.age).evaluate());
             }
+            /** BUILTIN **/
+            else if(n.equals(quickComputerKeys.SPEED_X_RANDOM.name())){
+                float sp0 = Float.parseFloat(sp[0]);
+                float sp1 = Float.parseFloat(sp[1]);
+                activeExpressions.add(p -> p.xdCache += randomFunc.apply(sp0,sp1));
+            }
+            else if(n.equals(quickComputerKeys.SPEED_Y_RANDOM.name())){
+                float sp0 = Float.parseFloat(sp[0]);
+                float sp1 = Float.parseFloat(sp[1]);
+                activeExpressions.add(p -> p.ydCache += randomFunc.apply(sp0,sp1));
+            }
+            else if(n.equals(quickComputerKeys.SPEED_Z_RANDOM.name())){
+                float sp0 = Float.parseFloat(sp[0]);
+                float sp1 = Float.parseFloat(sp[1]);
+                activeExpressions.add(p -> p.zdCache += randomFunc.apply(sp0,sp1));
+            }
+            /** BUILTIN COLOR**/
+            else if(n.equals(quickComputerKeys.COLOR_R_LERP.name())){
+                float[] sps = new float[]{Float.parseFloat(sp[0]),Float.parseFloat(sp[1])};
+                activeExpressions.add(p -> p.rCol = lifeLerpFunc.apply(sps));
+            }
+            else if(n.equals(quickComputerKeys.COLOR_G_LERP.name())){
+                float[] sps = new float[]{Float.parseFloat(sp[0]),Float.parseFloat(sp[1])};
+                activeExpressions.add(p -> p.gCol = lifeLerpFunc.apply(sps));
+            }
+            else if(n.equals(quickComputerKeys.COLOR_B_LERP.name())){
+                float[] sps = new float[]{Float.parseFloat(sp[0]),Float.parseFloat(sp[1])};
+                activeExpressions.add(p -> p.bCol = lifeLerpFunc.apply(sps));
+            }
+            else if(n.equals(quickComputerKeys.COLOR_A_LERP.name())){
+                float[] sps = new float[]{Float.parseFloat(sp[0]),Float.parseFloat(sp[1])};
+                activeExpressions.add(p -> p.alpha = lifeLerpFunc.apply(sps));
+            }
+
+            /** BUILTIN SIZE**/
+            else if(n.equals(quickComputerKeys.SIZE_LERP.name())){
+                float[] sps = new float[]{Float.parseFloat(sp[0]),Float.parseFloat(sp[1])};
+                activeExpressions.add(p -> p.quadSize = lifeLerpFunc.apply(sps));
+            }
+
+
+
         }
     }
 }
