@@ -6,33 +6,60 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.monster.Monster;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
-import thexu.functionparticle.partical.expParticle.expEncoder;
+import thexu.functionparticle.FunctionParticle;
+import thexu.functionparticle.partical.emitter.expEmitter;
 
 import java.util.function.Supplier;
 
 import static thexu.functionparticle.FunctionParticle.MODID;
 
+@EventBusSubscriber(modid = FunctionParticle.MODID, bus = EventBusSubscriber.Bus.MOD)
 public class ModEntities {
     public static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(Registries.ENTITY_TYPE, MODID);
 
 
 
     //emitter
-    public static final Supplier<EntityType<expEncoder>> PARTICLE_EMITTER =
+    public static final Supplier<EntityType<expEmitter>> PARTICLE_EMITTER =
             ENTITY_TYPES.register("emitter",
-                    () ->EntityType.Builder.<expEncoder>of(expEncoder::new, MobCategory.MISC)
+                    () ->EntityType.Builder.<expEmitter>of(expEmitter::new, MobCategory.MISC)
                             .sized(0.25F, 0.25F)
-                            .setTrackingRange(4)
-                            .setUpdateInterval(10)
+                            .clientTrackingRange(200)
+                            .setTrackingRange(200)
+                            .setUpdateInterval(1)
+                            .updateInterval(1)
                             .setShouldReceiveVelocityUpdates(true)
                             .build(ResourceLocation.fromNamespaceAndPath(MODID,"emitter").toString())
             );
 
 
 
+
+    @SubscribeEvent
+    public static void registerEntityAttributes(EntityAttributeCreationEvent event) {
+
+        AttributeSupplier.Builder kulouwangHandAttribs = Monster.createMobAttributes()
+                .add(Attributes.MAX_HEALTH, 20000)
+                .add(Attributes.MOVEMENT_SPEED, 0)
+                .add(Attributes.ATTACK_DAMAGE, 5)
+                .add(Attributes.KNOCKBACK_RESISTANCE, 1000);
+
+
+        event.put(ModEntities.PARTICLE_EMITTER.get(), kulouwangHandAttribs.build());
+
+
+
+    }
 
 
 

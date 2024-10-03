@@ -3,23 +3,11 @@ package thexu.functionparticle.partical.util;
 
 
 import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.world.entity.LivingEntity;
 import org.joml.Vector3f;
 import thexu.functionparticle.partical.expParticle.BaseFunctionOption;
-import thexu.functionparticle.partical.expParticle.expEncoder;
-import thexu.functionparticle.partical.expKeys;
-import thexu.functionparticle.partical.expPointKeys;
-import thexu.functionparticle.partical.gener.ParticleGener;
-import thexu.functionparticle.partical.quickComputerKeys;
 import thexu.functionparticle.partical.type.BaseParticleOptions;
 import thexu.functionparticle.partical.type.FogParticleOptions;
 import thexu.functionparticle.registry.ParticleRegistry;
-
-import javax.swing.text.html.parser.Entity;
-import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Function;
 
 public class ParticleHelper {
     //public static final ParticleOptions DRAGON_FIRE = ParticleRegistry.DRAGON_FIRE_PARTICLE.get();

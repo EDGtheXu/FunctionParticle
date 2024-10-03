@@ -8,8 +8,9 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.NotNull;
+import thexu.functionparticle.partical.emitter.expEmitter;
 
-public class emitRenderer extends EntityRenderer<Entity> {
+public class emitRenderer extends EntityRenderer<expEmitter> {
     protected ResourceLocation TEXTURE_LOCATION;
     protected RenderType RENDER_TYPE;
 
@@ -17,13 +18,13 @@ public class emitRenderer extends EntityRenderer<Entity> {
         super(pContext);
     }
 
-    public void render(@NotNull Entity pEntity, float pEntityYaw, float pPartialTicks, PoseStack pPoseStack, MultiBufferSource pBuffer, int pPackedLight) {
+    public void render(@NotNull expEmitter pEntity, float pEntityYaw, float pPartialTicks, PoseStack pPoseStack, MultiBufferSource pBuffer, int pPackedLight) {
 
         super.render(pEntity, pEntityYaw, pPartialTicks, pPoseStack, pBuffer, pPackedLight);
     }
 
     @Override
-    public @NotNull ResourceLocation getTextureLocation(@NotNull Entity pEntity) {
+    public @NotNull ResourceLocation getTextureLocation(@NotNull expEmitter pEntity) {
         return TEXTURE_LOCATION;
     }
 

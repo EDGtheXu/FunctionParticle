@@ -1,9 +1,11 @@
 package thexu.functionparticle.partical.expParticle;
 
+import com.mojang.math.MatrixUtil;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.*;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.objecthunter.exp4j.Expression;
@@ -12,8 +14,10 @@ import net.objecthunter.exp4j.function.Function;
 import org.checkerframework.common.returnsreceiver.qual.This;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import thexu.functionparticle.partical.CoordinateSystem;
+import thexu.functionparticle.partical.emitShape;
 import thexu.functionparticle.partical.expKeys;
 import thexu.functionparticle.partical.quickComputerKeys;
 
@@ -25,6 +29,8 @@ public class BaseFunctionParticle extends TextureSheetParticle {
     private Map<String,String> map;
 
     private boolean local = false;
+    private boolean init_speed = false;
+    private Float SIZE_INIT;
 
     //中心坐标初始位置
     private double xInit;
@@ -110,7 +116,7 @@ public class BaseFunctionParticle extends TextureSheetParticle {
         functions.addAll(List.of(distance, randomExp,expMax));
 
         this.xd=0;this.yd=0;this.zd=0;
-        this.friction = 0.5f;
+
         this.lifetime = 100;
         this.quadSize = 0.1f;
         //解析器
@@ -120,10 +126,28 @@ public class BaseFunctionParticle extends TextureSheetParticle {
         //初始化信息
         initAttributes(map);
         this.xCenter = x - xInit;
+
         this.yCenter = y - yInit;
         this.zCenter = z - zInit;
 
-        //activeExpressions.forEach(a->a.accept(this));
+        if(init_speed && keepSpeed){
+            if(map.containsKey(emitShape.CENTER.name())) {
+                var dir = new Vec3(xCenter,yCenter,zCenter).normalize().scale(Double.parseDouble(map.get("EMIT_POWER")));
+                this.xdCache += dir.x;
+                this.ydCache += dir.y;
+                this.zdCache += dir.z;
+
+            }
+            else{
+                String[] sp = map.get(expKeys.INIT_SPEED.name()).split(":");
+                this.xdCache += Double.parseDouble(sp[0]);
+                this.ydCache += Double.parseDouble(sp[1]);
+                this.zdCache += Double.parseDouble(sp[2]);
+            }
+        }
+
+        //初始化颜色
+        activeExpressions.forEach(a->a.accept(this));
     }
 
     @Override
@@ -142,6 +166,9 @@ public class BaseFunctionParticle extends TextureSheetParticle {
         //提前移除
         if(this.quadSize<=0) removed = true;
 
+        this.xdCache*=friction;
+        this.ydCache*=friction;
+        this.zdCache*=friction;
 
         if(local){// 如果是本地坐标系，更新速度cache旋转后的速度
             Vector3f rotd = new Vector3f((float) this.xdCache, (float) this.ydCache, (float) this.zdCache);
@@ -211,6 +238,8 @@ public class BaseFunctionParticle extends TextureSheetParticle {
 
     public void initAttributes(Map<String,String> map){
         Set<String> set=map.keySet();
+        boolean size_lerp_init = false;
+
         for (var n : set) {
             String v = map.get(n);
             var sp = v.split(":");
@@ -226,9 +255,9 @@ public class BaseFunctionParticle extends TextureSheetParticle {
                 this.directionYInit = Double.parseDouble(sp[1]);
                 local = true;
             }else if(n.equals(expKeys.INIT_SPEED.name())){
-                this.xdCache = Double.parseDouble(sp[0]);
-                this.ydCache = Double.parseDouble(sp[1]);
-                this.zdCache = Double.parseDouble(sp[2]);
+                init_speed = true;
+
+
             }else if(n.equals(expKeys.INIT_LIFETIME.name())){
                 this.lifetime = (int) new ExpressionBuilder(v).variables("x","y","z").functions(functions).build()
                         .setVariable("x",x).setVariable("y",y).setVariable("z",z).evaluate();
@@ -337,14 +366,57 @@ public class BaseFunctionParticle extends TextureSheetParticle {
                 activeExpressions.add(p -> p.alpha = lifeLerpFunc.apply(sps));
             }
 
-            /** BUILTIN SIZE**/
+            /** BUILTIN SIZE **/
             else if(n.equals(quickComputerKeys.SIZE_LERP.name())){
-                float[] sps = new float[]{Float.parseFloat(sp[0]),Float.parseFloat(sp[1])};
-                activeExpressions.add(p -> p.quadSize = lifeLerpFunc.apply(sps));
+
+                size_lerp_init = true;
+            }
+            /** BUILTIN INIT **/
+
+            /** GRAVITY **/
+            else if(n.equals(quickComputerKeys.GRAVITY.name())){
+                this.gravity = Float.parseFloat(sp[0]);
             }
 
+            /** FRICTION **/
+            else if(n.equals(quickComputerKeys.FRICTION.name())){
+                this.friction = Float.parseFloat(sp[0]);
+            }
 
+            /** SIZE **/
+            else if(n.equals(quickComputerKeys.INIT_SIZE_RANDOM.name())){
+                float sp0 = Float.parseFloat(sp[0]);
+                float sp1 = Float.parseFloat(sp[1]);
+                this.quadSize = random.nextFloat()*sp1+sp0;
+                SIZE_INIT = quadSize;
+            }
+
+            /** SPEED **/
+            else if(n.equals(quickComputerKeys.INIT_SPEED_X_RANDOM.name())){
+                float sp0 = Float.parseFloat(sp[0]);
+                float sp1 = Float.parseFloat(sp[1]);
+                this.xdCache = random.nextFloat()*sp1+sp0;
+            }
+            else if(n.equals(quickComputerKeys.INIT_SPEED_Y_RANDOM.name())){
+                float sp0 = Float.parseFloat(sp[0]);
+                float sp1 = Float.parseFloat(sp[1]);
+                this.ydCache = random.nextFloat()*sp1+sp0;
+            }
+            else if(n.equals(quickComputerKeys.INIT_SPEED_Z_RANDOM.name())){
+                float sp0 = Float.parseFloat(sp[0]);
+                float sp1 = Float.parseFloat(sp[1]);
+                this.zdCache = random.nextFloat()*sp1+sp0;
+            }
+        }
+
+        if(size_lerp_init){
+            String[]sp = map.get(quickComputerKeys.SIZE_LERP.name()).split(":");
+            float[] sps ;
+            if(SIZE_INIT==null) sps = new float[]{Float.parseFloat(sp[0]),Float.parseFloat(sp[1])};
+            else sps = new float[]{Float.parseFloat(sp[0])+SIZE_INIT,Float.parseFloat(sp[1])};
+            activeExpressions.add(p -> p.quadSize = lifeLerpFunc.apply(sps));
 
         }
+
     }
 }

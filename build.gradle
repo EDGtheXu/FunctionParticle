@@ -129,7 +129,10 @@ dependencies {
     // This adds the library to all the runs.
     additionalRuntimeClasspath "net.objecthunter:exp4j:0.4.8"
 
-
+    implementation "org.ejml:ejml-simple:0.43"
+    jarJar(implementation("org.ejml:ejml-simple")) { /* ... */ }
+    // This adds the library to all the runs.
+    additionalRuntimeClasspath "org.ejml:ejml-simple:0.43"
 
     // Example mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime

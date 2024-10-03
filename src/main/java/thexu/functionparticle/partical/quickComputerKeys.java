@@ -11,8 +11,16 @@ public enum quickComputerKeys {
     COLOR_B_LERP,
     COLOR_A_LERP,
 
-    SIZE_LERP
+    SIZE_LERP,
 
+    GRAVITY,
+    FRICTION,
+
+
+    INIT_SIZE_RANDOM,
+    INIT_SPEED_X_RANDOM,
+    INIT_SPEED_Y_RANDOM,
+    INIT_SPEED_Z_RANDOM,
 
 
 

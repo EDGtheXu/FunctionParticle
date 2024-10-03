@@ -7,17 +7,13 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec2;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
-import thexu.functionparticle.partical.expParticle.expEncoder;
-import thexu.functionparticle.partical.CoordinateSystem;
-import thexu.functionparticle.partical.gener.ParticleGener;
-import thexu.functionparticle.partical.util.ParticleHelper;
-import thexu.functionparticle.partical.util.expHelper;
+import thexu.functionparticle.partical.emitter.expEmitter;
+import thexu.functionparticle.partical.emitter.expHelper;
 
-import java.awt.*;
-import java.util.List;
-
-import static thexu.functionparticle.partical.util.ParticleHelper.*;
+import static thexu.functionparticle.partical.emitter.expHelper.*;
+import static thexu.functionparticle.partical.emitter.expHelper.EXP_RANDOM;
 
 public class menuItem extends Item {
 
@@ -30,23 +26,27 @@ public class menuItem extends Item {
     public @NotNull InteractionResultHolder<ItemStack> use(net.minecraft.world.level.Level pLevel, Player pPlayer, InteractionHand pUsedHand) {
 
 
-        if ( pUsedHand == InteractionHand.MAIN_HAND) {
-
-/*
-            ParticleGener gener = new ParticleGener(pPlayer.position().add(0,1,0),pPlayer.getRotationVector().add(new Vec2(pPlayer.getXRot(), 0)),
-                    ParticleGener.CoordinateSystem.WORLD,
-                    new  ParticleGener.Build()
-                            .genLine(0.1f,5).addToList()
-                            .build());
-            gener.genParticle(pLevel, ParticleRegistry.DRAGON_FIRE_PARTICLE.get());
-*/
-
-        }
-        if (!pLevel.isClientSide && pUsedHand == InteractionHand.OFF_HAND) {
+        if (!pLevel.isClientSide && pUsedHand == InteractionHand.MAIN_HAND) {
             expHelper helper = new expHelper();
             var exp =helper.exps.get(index);
             index = (index+1)%helper.exps.size();
+            Vec3 initPos = pPlayer.position().add(0,2,0);
+            expEmitter expGen = new expEmitter(pLevel,
+                    initPos,
+                    pPlayer.getRotationVector().add(new Vec2(pPlayer.getXRot(), 0)),
+                    exp
+            );
+            expGen.setPos(initPos);
+            pLevel.addFreshEntity(expGen);
 
+        }
+        if (!pLevel.isClientSide && pUsedHand == InteractionHand.OFF_HAND) {
+            /*
+            expHelper helper = new expHelper();
+
+            var exp =helper.exps.get(index);
+            index = (index+1)%helper.exps.size();
+*/
             //加载图片
             /*
             ParticleGener gener = new ParticleGener(
@@ -60,13 +60,13 @@ public class menuItem extends Item {
 */
             //sendFunctionParticle(pLevel,"hello world!");
 
-
-            expEncoder expGen = new expEncoder(pLevel,
-                    pPlayer.position().add(0,2,0),
+            Vec3 initPos = pPlayer.position().add(0,2,0);
+            expEmitter expGen = new expEmitter(pLevel,
+                    initPos,
                     pPlayer.getRotationVector().add(new Vec2(pPlayer.getXRot(), 0)),
-                    exp
+                    EXP_MOVE_SPHERE
                     );
-
+            expGen.setPos(initPos);
             pLevel.addFreshEntity(expGen);
         }
 
