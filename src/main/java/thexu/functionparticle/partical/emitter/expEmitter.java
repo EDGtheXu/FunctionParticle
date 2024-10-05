@@ -1,6 +1,7 @@
 package thexu.functionparticle.partical.emitter;
 
 import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
@@ -23,23 +24,26 @@ import thexu.functionparticle.registry.ModEntities;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.apache.commons.lang3.ArrayUtils.swap;
-
 public class expEmitter extends Mob {
-    private HashMap<String,String> map;
-    private String exp;
-    private List<Vector3f> pPoss;
-    private List<Vector3f> path;
-    private Vec2 rotInit;
-    private Vec3 initPos;
-    private int curCount = 0;
-    private int curPath = 0;
-    private int emitLife;
-    private float rx=0;
-    private float ry=0;
-    private float rz=0;
-    private float moveSpeed = 0;
-    private Builder builder;
+    protected HashMap<String,String> map;
+    protected String exp;
+    protected List<Vector3f> pPoss;
+    protected List<Vector3f> path;
+    protected Vec2 rotInit;
+    protected Vec3 initPos;
+    protected int curCount = 0;
+    protected int curPath = 0;
+    protected int emitLife;
+    protected float rx=0;
+    protected float ry=0;
+    protected float rz=0;
+    protected float tx=0;
+    protected float ty=0;
+    protected float tz=0;
+
+    protected float moveSpeed = 0;
+    protected Builder builder;
+    protected boolean rotY = false;
 
 /*
     //字符串构造
@@ -67,41 +71,60 @@ public class expEmitter extends Mob {
 */
 
 
-    public expEmitter(EntityType<expEmitter> entityType, Level level){
+    public expEmitter(EntityType<?extends expEmitter> entityType, Level level){
         super(entityType,level);
         this.noPhysics = true;
     }
 
-/** build构造 **/
-    public expEmitter(Level level, Vec3 initPos, Vec2 rotDirection, Builder expMap){
+
+    protected Vec2 rotDirection;
+    /** build构造 **/
+    public expEmitter(Level level, Vec3 initPos, Vec2 rotDirection, Builder expMap) {
         this(ModEntities.PARTICLE_EMITTER.get(), level);
         this.setPos(initPos);
         this.initPos = initPos;
-        this.pPoss=expMap.getPointsClone();
-        this.path=expMap.getPathClone();
-        this.map= expMap.getResultClone();
+        this.pPoss = expMap.getPointsClone();
+        this.path = expMap.getPathClone();
+        this.map = expMap.getResultClone();
         this.rx = expMap.rx;
         this.ry = expMap.ry;
         this.rz = expMap.rz;
+        this.tx = expMap.tx;
+        this.ty = expMap.ty;
+        this.tz = expMap.tz;
         this.moveSpeed = expMap.emitMoveSpeed;
         this.builder = expMap;
-        this.emitLife = builder.emitLife;;
+        this.emitLife = builder.emitLife;
+        this.rotDirection = rotDirection;
 
+
+        performChange();
+    }
+
+    public void performChange() {
         //若启用本地坐标轴，初始旋转方向
         rotInit = rotDirection;
         if(map.containsKey(expKeys.LOCAL.name()))
             map.put(expKeys.LOCAL.name(),rotDirection.x+":"+ rotDirection.y);
 
-        //表达式点旋转
+        //所有点平移
+        if(tx!=0||ty!=0||tz!=0){
+            for(var n : pPoss) {
+                n.x+=tx;
+                n.y+=ty;
+                n.z+=tz;
+            }
+        }
+
+        //所有点旋转
         if(rx!=0||ry!=0||rz!=0){
             for(var n : pPoss) new Matrix4f()
                     .rotate(Axis.XN.rotation(rx))
                     .rotate(Axis.YN.rotation(ry))
                     .rotate(Axis.ZN.rotation(rz))
-                    .transformPosition(n);
+                    .transformPosition(n);this.onAddedToLevel();
         }
 
-        this.exp = expEncode(map);
 
         //发射器位置初始化
         if(path!=null)
@@ -111,21 +134,30 @@ public class expEmitter extends Mob {
 
         //启用随机发射点
         if(builder.emitRandom){
-            int n = pPoss.size();
-            /******** 区别只有这两行 ********/
-            for (int i = 0 ; i < n; i++) {
-                // 从 i 到最后随机选一个元素
-                int rand = (int) (Math.random()*n);
-                /*************************/
-                var t = pPoss.get(rand);
-                pPoss.set(rand,pPoss.get(i));
-                pPoss.set(i,t);
-
-            }
+            randomPos();
         }
 
-    }
+        //记录绕轴旋转轴
+        if(builder.roty){
+            map.put(quickComputerKeys.ROT_Y.name(), initPos.x+":"+initPos.z);
+        }
 
+
+        this.exp = expEncode(map);
+    }
+    public void randomPos(){
+        int n = pPoss.size();
+        /******** 区别只有这两行 ********/
+        for (int i = 0 ; i < n; i++) {
+            // 从 i 到最后随机选一个元素
+            int rand = (int) (Math.random()*n);
+            /*************************/
+            var t = pPoss.get(rand);
+            pPoss.set(rand,pPoss.get(i));
+            pPoss.set(i,t);
+
+        }
+    }
 
 /** 发射器运动轨迹 **/
     public void genPath(List<Vector3f> points){
@@ -144,6 +176,7 @@ public class expEmitter extends Mob {
         private final List<Vector3f> Points = new ArrayList<>();
         private final List<Vector3f> path = new ArrayList<>();
         private emitShape shape = emitShape.NULL;
+        private boolean roty = false;
 
         private HashMap<String,String> getResultClone(){
             return new LinkedHashMap<>(result);
@@ -161,6 +194,9 @@ public class expEmitter extends Mob {
         private float rx;
         private float ry;
         private float rz;
+        private float tx;
+        private float ty;
+        private float tz;
         private float power;
         private float emitMoveSpeed = 0;
         private boolean emitRandom = false;
@@ -184,11 +220,19 @@ public class expEmitter extends Mob {
             return this;
         }
 
+
         //所有点的初始化旋转
         public Builder rotate(int xRot, int yRot, int zRot){
             rx=(float) java.lang.Math.toRadians(xRot);
             ry=(float) java.lang.Math.toRadians(yRot);
             rz=(float) java.lang.Math.toRadians(zRot);
+            return this;
+        }
+        //所有点的初始化平移
+        public Builder translate(int x, int y, int z){
+            tx=x;
+            ty=y;
+            tz=z;
             return this;
         }
 
@@ -239,10 +283,19 @@ public class expEmitter extends Mob {
             this.emitLife = tick;
             return this;
         }
+        public Builder emitFixedSpeed(int countPerTick){
+            result.put(expKeys.EMIT_SPEED.name(), String.valueOf(countPerTick));
+            return this;
+        }
         public Builder emitCircle(boolean b){
             this.circle = b;
             return this;
         }
+        public Builder emitLocal(boolean b){
+            if(b) result.put(expKeys.LOCAL.name(), "");
+            return this;
+        }
+
 
         public Builder emitRandom(boolean b){
             this.emitRandom = b;
@@ -257,13 +310,89 @@ public class expEmitter extends Mob {
             result.put("EMIT_POWER",power+"");
             return this;
         }
+
         public Builder emitPathCircle(boolean b){
             pathCircle = b;
             return this;
+        }
 
+        public Builder fixedLife(int tick){
+            result.put(expKeys.INIT_LIFETIME.name(),String.valueOf(tick));
+            return this;
+        }
+
+        public Builder keepSpeed(boolean b){
+            if(b) result.put(expKeys.KEEP_SPEED.name(),"");
+            return this;
+        }
+
+        public Builder randomSpeedXInit(float strength,float chance){
+            result.put(quickComputerKeys.INIT_SPEED_X_RANDOM.name(),strength+":"+chance);
+            return this;
+        }
+        public Builder randomSpeedYInit(float strength,float chance){
+            result.put(quickComputerKeys.INIT_SPEED_Y_RANDOM.name(),strength+":"+chance);
+            return this;
+        }
+        public Builder randomSpeedZInit(float strength,float chance){
+            result.put(quickComputerKeys.INIT_SPEED_Z_RANDOM.name(),strength+":"+chance);
+            return this;
         }
 
 
+        public Builder randomSizeInit(float strength,float chance){
+            result.put(quickComputerKeys.INIT_SIZE_RANDOM.name(),strength+":"+chance);
+            return this;
+        }
+        public Builder randomSpeedX(float strength,float chance){
+            result.put(quickComputerKeys.SPEED_X_RANDOM.name(),strength+":"+chance);
+            return this;
+        }
+        public Builder randomSpeedY(float strength,float chance){
+            result.put(quickComputerKeys.SPEED_Y_RANDOM.name(),strength+":"+chance);
+            return this;
+        }
+        public Builder randomSpeedZ(float strength,float chance){
+            result.put(quickComputerKeys.SPEED_Z_RANDOM.name(),strength+":"+chance);
+            return this;
+        }
+
+
+        public Builder lerpSize(float from,float to){
+            result.put(quickComputerKeys.SIZE_LERP.name(),from+":"+to);
+            return this;
+        }
+        public Builder lerpR(float from,float to){
+            result.put(quickComputerKeys.COLOR_R_LERP.name(),from+":"+to);
+            return this;
+        }
+        public Builder lerpG(float from,float to){
+            result.put(quickComputerKeys.COLOR_G_LERP.name(),from+":"+to);
+            return this;
+        }
+        public Builder lerpB(float from,float to){
+            result.put(quickComputerKeys.COLOR_B_LERP.name(),from+":"+to);
+            return this;
+        }
+        public Builder lerpA(float from,float to){
+            result.put(quickComputerKeys.COLOR_A_LERP.name(),from+":"+to);
+            return this;
+        }
+
+        public Builder gravity(float gravity){
+            result.put(quickComputerKeys.GRAVITY.name(),String.valueOf(gravity));
+            return this;
+        }
+
+        public Builder friction(float f){
+            result.put(quickComputerKeys.FRICTION.name(),String.valueOf(f));
+            return this;
+        }
+
+        public Builder rotY(boolean b){
+            roty = b;
+            return this;
+        }
 
 
         public static class ExpPoints {
@@ -361,9 +490,6 @@ public class expEmitter extends Mob {
             public ShapePoints confirm(){return this;}
         }
 
-
-
-
     }
 
     //添加几何构造点
@@ -376,7 +502,8 @@ public class expEmitter extends Mob {
     public void tick(){
 
         super.tick();
-        if(!level().isClientSide && tickCount>emitLife && tickCount > 20) discard();
+        if(!level().isClientSide && tickCount>emitLife && tickCount > 20)
+            discard();
 
         //轨迹运动
         if(path!=null){
@@ -399,6 +526,8 @@ public class expEmitter extends Mob {
 
 
         if(level().isClientSide)return;
+
+
         if(map==null){
             discard();
             return;
@@ -416,18 +545,15 @@ public class expEmitter extends Mob {
         else curCount+=count;
 
         //可能每次刚好发射完所有的粒子
-        if( builder != null && !builder.pathCircle && !builder.circle && curPath==0 && tickCount > 20)
+        if( builder != null && !builder.pathCircle && !builder.circle && curPath==0 && tickCount > 20 && curCount <= count)
             discard();
 
-
-
     }
+
     public int genParticle(int from,int count){
         for(int i=0;i<count;i++){
             if(from+i>=pPoss.size()) return i;
             var n = pPoss.get(from+i);
-
-
 
             //平移到发射器位置
             double x = n.x+this.getX();

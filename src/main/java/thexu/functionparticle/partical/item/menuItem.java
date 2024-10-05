@@ -11,6 +11,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import thexu.functionparticle.partical.emitter.expEmitter;
 import thexu.functionparticle.partical.emitter.expHelper;
+import thexu.functionparticle.partical.emitter.photoEmitter;
 
 import static thexu.functionparticle.partical.emitter.expHelper.*;
 import static thexu.functionparticle.partical.emitter.expHelper.EXP_RANDOM;
@@ -27,10 +28,13 @@ public class menuItem extends Item {
 
 
         if (!pLevel.isClientSide && pUsedHand == InteractionHand.MAIN_HAND) {
+            Vec3 initPos = pPlayer.position().add(0,2,0);
+
+
             expHelper helper = new expHelper();
             var exp =helper.exps.get(index);
             index = (index+1)%helper.exps.size();
-            Vec3 initPos = pPlayer.position().add(0,2,0);
+                        /*
             expEmitter expGen = new expEmitter(pLevel,
                     initPos,
                     pPlayer.getRotationVector().add(new Vec2(pPlayer.getXRot(), 0)),
@@ -38,6 +42,17 @@ public class menuItem extends Item {
             );
             expGen.setPos(initPos);
             pLevel.addFreshEntity(expGen);
+*/
+
+            photoEmitter emitter = new photoEmitter(pLevel,
+                    initPos,
+                    pPlayer.getRotationVector().add(new Vec2(pPlayer.getXRot(), 0)),
+                    "t2.png",
+                    0.03f,
+                    PHOTO_EMITTER
+                    );
+            pLevel.addFreshEntity(emitter);
+
 
         }
         if (!pLevel.isClientSide && pUsedHand == InteractionHand.OFF_HAND) {

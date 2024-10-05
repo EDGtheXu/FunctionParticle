@@ -18,6 +18,40 @@ public class expHelper {
     //public Function<LivingEntity, expEmitter.Builder> EXP_RANDOM_FUNCTION = (entity -> EXP_RANDOM.add(expKeys.INIT_SPEED,forward.apply(entity)));
 
 
+    public static final expEmitter.Builder PHOTO_EMITTER = new expEmitter.Builder()
+
+            .emitRandom(true)
+            .emitLocal(true)
+            .emitLife(1000)
+            .emitFixedSpeed(10000)
+
+//            .keepSpeed(true)
+            .fixedLife(300)
+            .lerpSize(0.05f,0.01f)
+            .translate(-5,5,0)
+            .rotate(0,90,0)
+            .rotY(true)
+            .randomSpeedX(0.01f,0.5f)
+            .randomSpeedY(0.01f,0.5f)
+            .randomSpeedZ(0.01f,0.5f)
+
+
+            ;
+
+
+
+//            .add(quickComputerKeys.INIT_SPEED_X_RANDOM ,"-0.005:0.01")
+//            .add(quickComputerKeys.INIT_SPEED_Y_RANDOM ,"-0.005:0.01")
+//            .add(quickComputerKeys.INIT_SPEED_Z_RANDOM ,"-0.005:0.01")
+
+
+            //init
+//            .add(quickComputerKeys.GRAVITY,"0.5")
+//
+//            .add(quickComputerKeys.SPEED_X_RANDOM,"0.005:0.5")
+//            .add(quickComputerKeys.SPEED_Y_RANDOM,"0.005:0.5")
+//            .add(quickComputerKeys.SPEED_Z_RANDOM,"0.005:0.5")
+            ;
 
     //example
     public static final expEmitter.Builder EXP_RANDOM = new expEmitter.Builder()
@@ -28,6 +62,7 @@ public class expHelper {
                     .addExp(expPointKeys.VARIABLE_X,"1:1:1")
                     .addExp(expPointKeys.VARIABLE_Y,"0.2:0.05:3")
                     .addExp(expPointKeys.VARIABLE_Z,"0:0.05:6.28")
+
 //                    .addExp(expPointKeys.VARIABLE_Y,"1:1:1")
 //                    .addExp(expPointKeys.VARIABLE_Z,"1:1:1")
                     .compute()

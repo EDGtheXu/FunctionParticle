@@ -48,9 +48,12 @@ public class BaseFunctionParticle extends TextureSheetParticle {
     private double zCenter;
 
     private boolean keepSpeed = false;
+    private boolean ifRotY = false;
 
     private double directionXInit;
     private double directionYInit;
+    private float rotYOffsetX;
+    private float rotYOffsetZ;
 
     private Expression xdExp;
     private Expression ydExp;
@@ -160,6 +163,7 @@ public class BaseFunctionParticle extends TextureSheetParticle {
             this.zdCache = 0;
         }
 
+
         //应用函数效果
         activeExpressions.forEach(a->a.accept(this));
 
@@ -186,6 +190,26 @@ public class BaseFunctionParticle extends TextureSheetParticle {
             this.zd = zdCache;
         }
 
+        //应用初始坐标轴旋转
+        if(map.containsKey(quickComputerKeys.ROT_Y.name())){
+            Vector3f xyz = new Vector3f((float) xCenter, (float) yCenter, (float) zCenter);
+            new Matrix4f()
+                    .rotate((float) (-Math.toRadians(5)),new Vector3f(0,1,0))
+
+                    .transformPosition(xyz)
+            ;
+//            x = xyz.x;
+//            y = xyz.y;
+//            z = xyz.z;
+            xdCache+=xyz.x-xCenter;
+            ydCache+=xyz.y-yCenter;
+            zdCache+=xyz.z-zCenter;
+
+            this.xd=xdCache;
+            this.yd=ydCache;
+            this.zd=zdCache;
+        }
+
         //更新位置缓存
         this.xCenter+=xdCache;
         this.yCenter+=ydCache;
@@ -194,7 +218,7 @@ public class BaseFunctionParticle extends TextureSheetParticle {
         super.tick();
 
         //距离过远直接舍弃
-        if((x-xInit*x-xInit+y-yInit*y-yInit+z-zInit*z-zInit) > 200) remove();
+        if(((x-xInit)*(x-xInit)+(y-yInit)*(y-yInit)+(z-zInit)*(z-zInit)) > 10000) remove();
     }
 
     @NotNull
@@ -406,6 +430,12 @@ public class BaseFunctionParticle extends TextureSheetParticle {
                 float sp0 = Float.parseFloat(sp[0]);
                 float sp1 = Float.parseFloat(sp[1]);
                 this.zdCache = random.nextFloat()*sp1+sp0;
+            }
+
+            /** ROT **/
+            else if(n.equals(quickComputerKeys.ROT_Y.name())){
+                rotYOffsetX = Float.parseFloat(sp[0]);
+                rotYOffsetZ = Float.parseFloat(sp[1]);
             }
         }
 

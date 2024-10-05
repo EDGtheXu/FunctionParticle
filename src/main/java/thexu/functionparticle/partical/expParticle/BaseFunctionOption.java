@@ -24,7 +24,7 @@ public class BaseFunctionOption implements ParticleOptions {
     public String getExp() {
         return this.exp;
     }
-    //For networking. Encoder/Decoder functions very intuitive
+
     public static StreamCodec<? super ByteBuf, BaseFunctionOption> STREAM_CODEC = StreamCodec.of(
             (buf, option) -> {
                 buf.writeDouble(option.x);

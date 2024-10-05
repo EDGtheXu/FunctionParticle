@@ -18,6 +18,7 @@ public class registerRenderEvent {
     static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         //particle
         event.registerEntityRenderer(ModEntities.PARTICLE_EMITTER.get(), emitRenderer::new);
+        event.registerEntityRenderer(ModEntities.PHOTO_EMITTER.get(), emitRenderer::new);
 
 
     }

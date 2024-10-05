@@ -22,6 +22,7 @@ public enum quickComputerKeys {
     INIT_SPEED_Y_RANDOM,
     INIT_SPEED_Z_RANDOM,
 
+    ROT_Y
 
 
 }

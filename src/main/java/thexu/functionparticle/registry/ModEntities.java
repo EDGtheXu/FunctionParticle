@@ -6,7 +6,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
-import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Monster;
@@ -18,6 +17,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import thexu.functionparticle.FunctionParticle;
 import thexu.functionparticle.partical.emitter.expEmitter;
+import thexu.functionparticle.partical.emitter.photoEmitter;
 
 import java.util.function.Supplier;
 
@@ -41,7 +41,17 @@ public class ModEntities {
                             .setShouldReceiveVelocityUpdates(true)
                             .build(ResourceLocation.fromNamespaceAndPath(MODID,"emitter").toString())
             );
-
+    public static final DeferredHolder<EntityType<?>, EntityType<photoEmitter>> PHOTO_EMITTER =
+            ENTITY_TYPES.register("photo_emitter",
+                    () ->EntityType.Builder.<photoEmitter>of(photoEmitter::new, MobCategory.MISC)
+                            .sized(0.25F, 0.25F)
+                            .clientTrackingRange(200)
+                            .setTrackingRange(200)
+                            .setUpdateInterval(1)
+                            .updateInterval(1)
+                            .setShouldReceiveVelocityUpdates(true)
+                            .build(ResourceLocation.fromNamespaceAndPath(MODID,"photo_emitter").toString())
+            );
 
 
 
